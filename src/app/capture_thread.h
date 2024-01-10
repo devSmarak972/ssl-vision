@@ -26,6 +26,7 @@
 #endif
 #include "capturefromfile.h"
 #include "capturev4l.h"
+#include "capture_ros.h"
 #include "capture_generator.h"
 #include "capture_splitter.h"
 #include <QThread>
@@ -35,6 +36,13 @@
 #include "visionstack.h"
 #include "capturestats.h"
 #include "affinity_manager.h"
+
+
+#include <ros/ros.h>
+#include <image_transport/image_transport.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <cv_bridge/cv_bridge.h>
+#include <ros/callback_queue.h>
 
 #ifdef MVIMPACT2
 #include "capture_bluefox2.h"
@@ -80,6 +88,8 @@ protected:
   CaptureInterface * captureBasler = nullptr;
   CaptureInterface * captureSpinnaker = nullptr;
   CaptureInterface * captureSplitter = nullptr;
+    CaptureInterface * captureROS;
+  ros::NodeHandle * nh;
   AffinityManager * affinity;
   FrameBuffer * rb;
   bool _kill;
@@ -95,6 +105,8 @@ protected:
   VarList * basler = nullptr;
   VarList * spinnaker = nullptr;
   VarList * splitter = nullptr;
+    VarList * ROS=nullptr;
+
   VarList * control;
   VarTrigger * c_start;
   VarTrigger * c_stop;
@@ -103,6 +115,7 @@ protected:
   VarBool * c_auto_refresh;
   VarBool * c_print_timings;
   VarStringEnum * captureModule;
+  Timer timer;
 
 public slots:
   bool init();

@@ -20,6 +20,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_PREFIX_PATH  "/opt/ros/noetic;${CMAKE_MODULE_PATH}")
+
 
 # Find third-party libraries
 find_package(OpenGL REQUIRED)
@@ -30,10 +32,35 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 find_package(Qt5OpenGL REQUIRED)
+
+
+add_definitions(-D UNIX)
+add_definitions(-D LINUX)
+add_definitions(-D _GNU_SOURCE)
 # Note: Bluefox SDK is not compatible with some components of OpenCV. Take care when enabling more.
-find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs )
+find_package(OpenCV REQUIRED COMPONENTS core imgproc )
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+  std_msgs
+  image_transport
+  cv_bridge
+)
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+)
+catkin_package()
 
 include(src/shared/CMakeLists.txt.inc)
+
+
+set (SHARED_SRCS ${SHARED_SRCS}
+		${shared_dir}/capture/capture_ros.cpp
+		)
+set (SHARED_HEADERS ${SHARED_HEADERS}
+		${shared_dir}/capture/capture_ros.h
+		)
+message(STATUS "ROS enabled")
 
 if( USE_mvIMPACT )
 	find_package(mvIMPACT REQUIRED)
@@ -134,6 +161,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src/app)
 include_directories(${PROJECT_SOURCE_DIR}/src/app/gui)
 include_directories(${PROJECT_SOURCE_DIR}/src/app/plugins)
 include_directories(${PROJECT_SOURCE_DIR}/src/app/stacks)
+include_directories(include ${catkin_INCLUDE_DIRS} ${eigen3_INCLUDE_DIRS})
 
 set (SRCS ${SRCS}
 	src/app/capture_thread.cpp
@@ -242,8 +270,10 @@ set (CMAKE_CXX_FLAGS_DEBUG "-g -Wl,--no-as-needed")
 set (CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3 -march=native -Wl,--no-as-needed")
 
 ## build the common code
-add_library(sslvision ${SHARED_MOC_SRCS} ${SHARED_RC_SRCS} ${CC_PROTO} ${SHARED_SRCS})
+add_library(sslvision STATIC ${SHARED_MOC_SRCS} ${SHARED_RC_SRCS} ${CC_PROTO} ${SHARED_SRCS})
 add_dependencies(sslvision GenerateProto)
+message (STATUS "Custom catkin libs: ${catkin_LIBRARIES}")
+message (qt5 "QT5 libs:   ${Qt5}")
 
 set (libs
   ${QT_LIBRARIES}
@@ -253,23 +283,23 @@ set (libs
   ${PROTOBUF_LIBRARIES}
   ${DC1394_LIBRARIES}
   ${mvIMPACT_LIBS}
-  ${PYLON_LIBRARIES}
+#   ${PYLON_LIBRARIES}
   ${OpenCV_LIBS}
   ${FLYCAP_LIBS}
   ${SPINNAKER_LIBS}
   ${V4L_LIBS}
   Eigen3::Eigen
 )
-target_link_libraries(sslvision ${libs} Qt5::Widgets)
-set (libs ${libs} sslvision)
+target_link_libraries(sslvision ${libs} ${catkin_LIBRARIES} Qt5::Widgets)
+set (libs ${libs} jpeg png -I/usr/local/lib/ -lprotobuf pthread GL GLU  sslvision)
 
 ## build the main app
 add_executable(vision ${UI_SRCS} ${MOC_SRCS} ${RC_SRCS} ${SRCS})
-target_link_libraries(vision ${libs} Qt5::Widgets Qt5::OpenGL)
+target_link_libraries(vision ${libs} ${catkin_LIBRARIES} Qt5::Widgets Qt5::OpenGL)
 
 ## build non graphical client
 add_executable(client src/client/main.cpp )
-target_link_libraries(client ${libs} Qt5::Core)
+target_link_libraries(client ${libs} ${catkin_LIBRARIES} Qt5::Core)
 
 ## build graphical client
 add_executable(graphicalClient ${GCLIENT_MOC_SRCS}
@@ -277,4 +307,7 @@ add_executable(graphicalClient ${GCLIENT_MOC_SRCS}
   src/graphicalClient/soccerview.cpp
   src/graphicalClient/gltext.cpp
 )
-target_link_libraries(graphicalClient ${libs} Qt5::Widgets Qt5::OpenGL)
+target_link_libraries(graphicalClient ${libs} ${catkin_LIBRARIES} Qt5::Widgets Qt5::OpenGL)
+
+add_executable(test_subscriber src/test_subscriber.cpp)
+target_link_libraries(test_subscriber ${catkin_LIBRARIES})

@@ -23,6 +23,7 @@
 #include <capture_splitter.h>
 #include <iostream>
 #include <iomanip>
+#include <typeinfo>
 
 CaptureThread::CaptureThread(int cam_id)
 {
@@ -38,13 +39,14 @@ CaptureThread::CaptureThread(int cam_id)
   // timings should only be printed on demand for a short period of time by temporally activating this flag
   control->addChild( (VarType*) (c_print_timings = new VarBool("print timings",false)));
   control->addChild( (VarType*) (c_refresh= new VarTrigger("re-read params","Refresh")));
-  control->addChild( (VarType*) (captureModule= new VarStringEnum("Capture Module",camId < 1 ? "Read from files" : "None")));
+  control->addChild( (VarType*) (captureModule= new VarStringEnum("Capture Module","ROS")));
   captureModule->addFlags(VARTYPE_FLAG_NOLOAD_ENUM_CHILDREN);
-  captureModule->addItem("None");
   captureModule->addItem("Read from files");
   captureModule->addItem("Generator");
+  captureModule->addItem("From ROS Topic");
   settings->addChild( (VarType*) (fromfile = new VarList("Read from files")));
   settings->addChild( (VarType*) (generator = new VarList("Generator")));
+  settings->addChild( (VarType*) (ROS = new VarList("From ROS Topic")));
   settings->addFlags( VARTYPE_FLAG_AUTO_EXPAND_TREE );
   c_stop->addFlags( VARTYPE_FLAG_READONLY );
   c_refresh->addFlags( VARTYPE_FLAG_READONLY );
@@ -114,10 +116,19 @@ CaptureThread::CaptureThread(int cam_id)
   settings->addChild(splitter);
   captureSplitter = new CaptureSplitter(splitter, camId);
 #endif
-
+  char *argv[] = {"dummy", NULL};
+  int argc = sizeof(argv) / sizeof(char*) - 1;
+  ros::init(argc, argv, "image_listener");
+  captureModule->addItem("From ROS Topic");
+  ROS = new VarList("From ROS Topic");
+  settings->addChild(ROS);
+  nh = new ros::NodeHandle();
+  captureROS = new CaptureROS(ROS, nh);
+  
   selectCaptureMethod();
   _kill =false;
   rb=0;
+
 }
 
 void CaptureThread::setAffinityManager(AffinityManager * _affinity) {
@@ -139,7 +150,8 @@ CaptureThread::~CaptureThread()
   delete captureFiles;
   delete captureGenerator;
   delete counter;
-
+  delete captureROS;
+  delete nh;
 #ifdef DC1394
   delete captureDC1394;
 #endif
@@ -193,6 +205,9 @@ void CaptureThread::selectCaptureMethod() {
     new_capture = captureFiles;
   } else if(captureModule->getString() == "Generator") {
     new_capture = captureGenerator;
+  } else if (captureModule->getString() == "From ROS Topic") {
+    std::cout<<"From ros"<<std::endl;
+    new_capture = captureROS;
   }
 #ifdef DC1394
   else if(captureModule->getString() == "DC 1394") {
@@ -234,14 +249,34 @@ void CaptureThread::selectCaptureMethod() {
     new_capture = captureSplitter;
   }
 #endif
-
-  if (old_capture!=nullptr && new_capture!=old_capture && old_capture->isCapturing()) {
-    capture_mutex.unlock();
-    stop();
-    capture_mutex.lock();
+ else {
+    std::cout<<"From DC-ROS"<<std::endl;
+    new_capture = captureROS;
   }
+  
+  if(old_capture==nullptr)
+  cout<<"null old\n";
+  else
+  {
+    //  cout<<"type id"<<typeid(old_capture).name()<<endl;
+    // cout<<old_capture->isCapturing()<<" here1"<<endl;
+  }
+
+
+  // if (old_capture!=nullptr && new_capture!=old_capture && old_capture->isCapturing()) {
+  // cout<<"stop old capture\n";
+  //   capture_mutex.unlock();
+  //   stop();
+  //   capture_mutex.lock();
+  //   capture=new_capture;
+  //   capture_mutex.unlock();
+  //   return;
+  // }
+    cout<<"now setting capture to new capture\n";
   capture=new_capture;
+  cout<<"here2"<<endl;
   capture_mutex.unlock();
+  
 }
 
 void CaptureThread::kill() {
@@ -255,6 +290,7 @@ bool CaptureThread::init() {
   capture_mutex.lock();
   bool res = (capture != nullptr) && capture->startCapture();
   if (res==true) {
+    cout<<"here in cap init"<<endl;
     c_start->addFlags( VARTYPE_FLAG_READONLY );
     c_reset->addFlags( VARTYPE_FLAG_READONLY );
     c_refresh->removeFlags( VARTYPE_FLAG_READONLY );
