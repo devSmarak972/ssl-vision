@@ -339,6 +339,7 @@ void CaptureThread::run() {
 
     while(true) {
       if (rb!=0) {
+        ros::spinOnce();
         int idx=rb->curWrite();
         FrameData * d=rb->getPointer(idx);
         if ((stats=(CaptureStats *)d->map.get("capture_stats")) == 0) {

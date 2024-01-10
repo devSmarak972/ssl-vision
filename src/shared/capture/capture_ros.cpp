@@ -74,7 +74,7 @@ void CaptureROS::imageCallback(const sensor_msgs::ImageConstPtr& msg)
     // cv::imshow("view", cv_bridge::toCvShare(msg, "bgr8")->image);
     // cv::waitKey(30);
 
-    // std::cout<<"was called"<<std::endl;
+    std::cout<<"was called"<<std::endl;
     
     end = std::clock()/(double) CLOCKS_PER_SEC;
     file<<"diff: "<<end-start<<"\n";
@@ -96,9 +96,14 @@ bool CaptureROS::startCapture()
   mutex.lock();
 #endif
   it = new image_transport::ImageTransport(*nh);
-  sub = it->subscribe(v_image_topic->getString(), 2, &CaptureROS::imageCallback, this);
+  // image_transport::ImageTransport it1(*nh);
+  // image_transport::Subscriber sub1 = it1.subscribe("/pylon_camera_node/image_raw", 1, &CaptureRos::imageCallback);
+
+  // sub = it->subscribe(v_image_topic->getString(), 2, &CaptureROS::imageCallback, this);
+  sub = it->subscribe(v_image_topic->getString(), 1, &CaptureROS::imageCallback,this);
+
   is_capturing = true;
-  cout<<"here in start capture"<<endl;
+  cout<<"here in start capture"<<v_image_topic->getString()<<endl;
 #ifndef VDATA_NO_QT
   mutex.unlock();
 #endif

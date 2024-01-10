@@ -1,8 +1,0 @@
-prefix=/opt/ros/noetic
-
-Name: genmsg
-Description: Description of genmsg
-Version: 0.6.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

@@ -1,8 +1,0 @@
-prefix=/opt/ros/noetic
-
-Name: rosbuild
-Description: Description of rosbuild
-Version: 1.15.8
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
