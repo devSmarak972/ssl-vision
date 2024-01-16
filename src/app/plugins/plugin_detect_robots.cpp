@@ -141,14 +141,13 @@ ProcessResult PluginDetectRobots::process(FrameData * data, RenderOptions * opti
       if (need_reinit) {
         detector->init(global_team_detector_settings->getRobotPattern(), team);
       }
-
       detector->update(robotlist, color_id,  num_robots, image, colorlist, reg_tree);
     } else {
       _notifier.changeSlotOtherChange();
     }
 
-//    printf("DETECTED %d robots on team %d\n",robotlist->size(),team_i);
-//    fflush(stdout);
+   printf("DETECTED %d robots on team %d\n",robotlist->size(),team_i);
+   fflush(stdout);
   }
   return ProcessingOk;
 

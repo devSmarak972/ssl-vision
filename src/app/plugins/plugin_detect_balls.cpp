@@ -193,6 +193,7 @@ ProcessResult PluginDetectBalls::process ( FrameData * data, RenderOptions * opt
     } else {
       robots_blue_n=detection_frame->robots_blue_size();
       robots_yellow_n=detection_frame->robots_yellow_size();
+      // cout<<robots_blue_n<<" num blue robots\n";
       if (robots_blue_n==0 && robots_yellow_n==0) use_near_robot_filter=false;
     }
   }
@@ -268,6 +269,7 @@ ProcessResult PluginDetectBalls::process ( FrameData * data, RenderOptions * opt
 
       // add filtered region to the region list
       if(conf > 0) {
+        // cout<<"Ball found"<<endl;
         result.push_back(BallDetectResult(reg,conf));
       }
 
@@ -296,6 +298,7 @@ ProcessResult PluginDetectBalls::process ( FrameData * data, RenderOptions * opt
       ball->set_y ( field_pos_3d.y );
       ball->set_pixel_x ( it->reg->cen_x );
       ball->set_pixel_y ( it->reg->cen_y );
+      // cout<<"X-coordinate: "<<field_pos_3d.x<<" Y-coordinate: "<<field_pos_3d.y<<endl;
     }
 
   }

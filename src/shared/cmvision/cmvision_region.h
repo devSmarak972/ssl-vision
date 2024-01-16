@@ -240,8 +240,8 @@ public:
     while(reg!=0) {
       w = reg->width();
       h = reg->height();
-
       if(reg->area < area.min) return(0);
+      
       if(width.inside(w) && height.inside(h)){
         const CMVision::Region *match = reg;
         reg = reg->next;

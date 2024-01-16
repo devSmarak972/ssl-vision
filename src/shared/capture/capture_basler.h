@@ -13,9 +13,13 @@
 #include <pylon/PylonBase.h>
 #include <pylon/PylonImage.h>
 #include <pylon/gige/BaslerGigEInstantCamera.h>
+#include <pylon/BaslerUniversalInstantCamera.h>
+
+
 #include <sys/time.h>
 #include "VarTypes.h"
 #include "TimeSync.h"
+#include <pylon/usb/BaslerUsbInstantCamera.h>
 
 // Unset 'interface' from pylon/api_autoconf.h which conflicts with variables in ssl-vision
 #undef interface
@@ -66,8 +70,8 @@ private:
 	bool is_capturing;
         TimeSync timeSync;
         bool ignore_capture_failure;
-	Pylon::CBaslerGigEInstantCamera* camera;
-	Pylon::CBaslerGigEGrabResultPtr grab_result;
+	Pylon::CBaslerUsbInstantCamera* camera;
+	Pylon::CGrabResultPtr grab_result;
 	Pylon::CImageFormatConverter converter;
 	unsigned int current_id;
   	unsigned char* last_buf;

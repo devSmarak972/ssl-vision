@@ -47,6 +47,7 @@ CaptureThread::CaptureThread(int cam_id)
   settings->addChild( (VarType*) (fromfile = new VarList("Read from files")));
   settings->addChild( (VarType*) (generator = new VarList("Generator")));
   settings->addChild( (VarType*) (ROS = new VarList("From ROS Topic")));
+    settings->addChild( (VarType*) (ROS = new VarList("Basler GigE")));
   settings->addFlags( VARTYPE_FLAG_AUTO_EXPAND_TREE );
   c_stop->addFlags( VARTYPE_FLAG_READONLY );
   c_refresh->addFlags( VARTYPE_FLAG_READONLY );
@@ -60,7 +61,7 @@ CaptureThread::CaptureThread(int cam_id)
   capture=nullptr;
   captureFiles = new CaptureFromFile(fromfile, camId);
   captureGenerator = new CaptureGenerator(generator);
-
+  // captureBasler = new CaptureBasler(basler, camId);
 #ifdef DC1394
   captureModule->addItem("DC 1394");
   dc1394 = new VarList("DC1394");
@@ -124,7 +125,11 @@ CaptureThread::CaptureThread(int cam_id)
   settings->addChild(ROS);
   nh = new ros::NodeHandle();
   captureROS = new CaptureROS(ROS, nh);
-  
+  captureModule->addItem("Basler GigE");
+  // basler = new VarList("Basler GigE");
+  // settings->addChild(basler);
+  captureBasler = new CaptureBasler(basler, camId);
+
   selectCaptureMethod();
   _kill =false;
   rb=0;
@@ -208,6 +213,8 @@ void CaptureThread::selectCaptureMethod() {
   } else if (captureModule->getString() == "From ROS Topic") {
     std::cout<<"From ros"<<std::endl;
     new_capture = captureROS;
+  }  else if (captureModule->getString() == "Basler GigE") {
+    new_capture = captureBasler;
   }
 #ifdef DC1394
   else if(captureModule->getString() == "DC 1394") {
@@ -251,7 +258,10 @@ void CaptureThread::selectCaptureMethod() {
 #endif
  else {
     std::cout<<"From DC-ROS"<<std::endl;
-    new_capture = captureROS;
+    new_capture = captureBasler;
+    if(new_capture==nullptr)
+    cout<<"basler not set\n";
+    // new_capture = captureROS;
   }
   
   if(old_capture==nullptr)

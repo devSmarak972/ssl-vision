@@ -46,8 +46,16 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   cv_bridge
 )
+## System dependencies are found with CMake's conventions
+find_package(Pylon QUIET)
+if (NOT ${Pylon_FOUND})
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindPYLON.cmake")
+endif()
+
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${Pylon_INCLUDE_DIRS}
+
 )
 catkin_package()
 
@@ -283,7 +291,7 @@ set (libs
   ${PROTOBUF_LIBRARIES}
   ${DC1394_LIBRARIES}
   ${mvIMPACT_LIBS}
-#   ${PYLON_LIBRARIES}
+  ${PYLON_LIBRARIES}
   ${OpenCV_LIBS}
   ${FLYCAP_LIBS}
   ${SPINNAKER_LIBS}

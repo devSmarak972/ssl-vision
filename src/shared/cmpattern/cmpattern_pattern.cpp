@@ -226,7 +226,7 @@ bool MultiPatternModel::loadSinglePatternImage(const yuvImage & image, YUVLUT * 
       marker_color_ids.push_back(id);
     }
   }
-
+  printf("number of color ids %d\n",marker_color_ids.size());
   CMVision::ImageProcessor proc(_lut);
 
 /*  // remap all dark greens to vision's field green color
@@ -241,10 +241,10 @@ bool MultiPatternModel::loadSinglePatternImage(const yuvImage & image, YUVLUT * 
 
   // run low level vision on the image
 
-  proc.processYUV444(&image,10);
+  proc.processYUV444(&image,4000);
 
   CMVision::ColorRegionList * colors = proc.getColorRegionList();
-
+  printf("num_color_regions : %d\n",colors->getNumColorRegions());
   const CMVision::Region * reg = colors->getRegionList(color_team_id).getInitialElement();
 
   // find center dot
@@ -255,11 +255,10 @@ bool MultiPatternModel::loadSinglePatternImage(const yuvImage & image, YUVLUT * 
 
   vector2f cen(-reg->cen_y,-reg->cen_x);
 
-  // find height
+  // find heightP
   float height = default_object_height;
   if (color_height_id!=-1) {
     reg = colors->getRegionList(color_height_id).getInitialElement();
-
     if(reg!=0 ){
       if(reg->width()<1 || reg->width() > 6) {
         printf("WARNING: No Object Height Indicator Found in Image (for robot id=%d)!\n",idx);
@@ -280,6 +279,14 @@ bool MultiPatternModel::loadSinglePatternImage(const yuvImage & image, YUVLUT * 
   for(unsigned int c=0; c<marker_color_ids.size(); c++) {
     reg = colors->getRegionList(marker_color_ids[c]).getInitialElement();
     while(reg != 0){
+    if(reg->width()<3 || reg->height() <3)
+    {
+            reg = reg->next;
+            printf("area of new %d",reg->area);
+    }
+
+
+      printf("detecting regions in file: %d %d \n",reg->width(),reg->height());
       if (reg->width() > 3 && reg->height() > 3) {
         vector2f p(-reg->cen_y,-reg->cen_x);
         m.loc = p - cen;
@@ -398,6 +405,7 @@ bool MultiPatternModel::findPattern(PatternDetectionResult & result, Marker * ma
       int j = (i + ofs) % num_markers;
       pattern = (pattern << 8) | markers[j].id.v;
     }
+    // cout<<"pattern :"<<(int)pattern<<endl;
 
     // find covers with matching pattern code and number of markers
     for(int i=0; i<num_patterns; i++){
@@ -406,7 +414,7 @@ bool MultiPatternModel::findPattern(PatternDetectionResult & result, Marker * ma
         if(p.num_markers==num_markers && p.pattern==pattern){
           // calculate fit error for matching pattern
           double sse = calcFitError(p.markers,markers,num_markers,ofs,fit_params);
-//          printf("SSE: %f\n",sse);
+         printf("SSE: %f\n",sse);
           /*if(unlikely(verbose > 1)){
             float conf = SSEVsUniform(sse,fit_variance,fit_uniform);
             printf("    0x%04X id=%X err=%6.3f conf=%0.6f\n",

@@ -163,6 +163,8 @@ void TeamDetector::init(RobotPattern * robotPattern, Team * team)
           fprintf(stderr,"Error loading team image file: '%s'.\n",_marker_image_file.c_str());
           fflush(stderr);
     }
+    if(model.usesColor(color_id_cyan)) cout<<"cyan in the image file"<<endl;
+    cout<<"num patterns: "<<model.getNumPatterns()<<endl;
     for (int i=0;i<model.getNumPatterns();i++) {
       model.getPattern(i).setEnabled(_robotPattern->_valid_patterns->isSelected(i));
     }
@@ -182,8 +184,8 @@ void TeamDetector::update(::google::protobuf::RepeatedPtrField< ::SSL_DetectionR
   color_id_team=team_color_id;
   _max_robots=max_robots;
   robots->Clear();
-
   if (_unique_patterns) {
+    cout<<"find robots by model\n";
     findRobotsByModel(robots,team_color_id,image,colorlist,reg_tree);
   } else {
     findRobotsByTeamMarkerOnly(robots,team_color_id,image,colorlist);
@@ -236,6 +238,7 @@ void TeamDetector::findRobotsByTeamMarkerOnly(::google::protobuf::RepeatedPtrFie
         robot->set_pixel_x(reg->cen_x);
         robot->set_pixel_y(reg->cen_y);
         robot->set_height(_robot_height);
+        cout<<"Robot co-ordinates: "<<reg_center.x<<" , "<<reg_center.y<<endl;
       }
     }
   }
@@ -429,7 +432,8 @@ void TeamDetector::findRobotsByModel(::google::protobuf::RepeatedPtrField< ::SSL
   filter_team.init( colorlist->getRegionList(team_color_id).getInitialElement());
   const CMVision::Region * reg=0;
   SSL_DetectionRobot * robot=0;
-
+  cout<<"num regions "<<colorlist->getRegionList(team_color_id).getNumRegions()<<endl;
+  // cout<<"center marker area "<<filter_team.getArea()<<endl;
   MultiPatternModel::PatternDetectionResult res;
 
   while((reg = filter_team.getNext()) != 0) {
@@ -437,9 +441,11 @@ void TeamDetector::findRobotsByModel(::google::protobuf::RepeatedPtrField< ::SSL
     vector3d reg_center3d;
     _camera_params.image2field(reg_center3d,reg_img_center,_robot_height);
     vector2d reg_center(reg_center3d.x,reg_center3d.y);
+    cout<<reg_center3d.x<<" "<<reg_center3d.y<<endl;
     //TODO add masking:
     //if(det.mask.get(reg->cen_x,reg->cen_y) >= 0.5){
     if (field_filter.isInFieldOrPlayableBoundary(reg_center)) {
+      cout<<"In field"<<endl;
       cen.set(reg,reg_center3d,getRegionArea(reg,_robot_height));
       int num_markers = 0;
 
@@ -449,8 +455,10 @@ void TeamDetector::findRobotsByModel(::google::protobuf::RepeatedPtrField< ::SSL
       while((mreg=reg_tree.getNextNearest(sd))!=0 && num_markers<MaxDetections) {
         //TODO: implement masking:
         // filter_other.check(*mreg) && det.mask.get(mreg->cen_x,mreg->cen_y)>=0.5
-
+        cout<<"area : "<<mreg->area<<endl;
         if(filter_others.check(*mreg) && model.usesColor(mreg->color)) {
+          cout<<"get next nearestfilter others inside : "<<(int)mreg->color.v<<endl;
+
           vector2d marker_img_center(mreg->cen_x,mreg->cen_y);
           vector3d marker_center3d;
           _camera_params.image2field(marker_center3d,marker_img_center,_robot_height);
@@ -460,7 +468,7 @@ void TeamDetector::findRobotsByModel(::google::protobuf::RepeatedPtrField< ::SSL
           vector2f ofs = m.loc - cen.loc;
           m.dist = ofs.length();
           m.angle = ofs.angle();
-
+          printf("m.dist: %f\n",m.dist);
           if(m.dist>0.0 && m.dist<marker_max_dist){
             num_markers++;
           }
@@ -468,10 +476,12 @@ void TeamDetector::findRobotsByModel(::google::protobuf::RepeatedPtrField< ::SSL
       }
       reg_tree.endQuery();
 
+      cout<<"Num markers: "<<num_markers<<endl;
+
       if(num_markers >= 2){
         CMPattern::PatternProcessing::sortMarkersByAngle(markers,num_markers);
         for(int i=0; i<num_markers; i++){
-          /*DEBUG CODE:
+          // DEBUG CODE:
           char colorchar='?';
           if (markers[i].id==color_id_green) colorchar='g';
           if (markers[i].id==color_id_pink) colorchar='p';
@@ -479,7 +489,7 @@ void TeamDetector::findRobotsByModel(::google::protobuf::RepeatedPtrField< ::SSL
           if (markers[i].id==color_id_team) colorchar='t';
           if (markers[i].id==color_id_field_green) colorchar='f';
           if (markers[i].id==color_id_cyan) colorchar='c';
-          printf("%c ",colorchar);*/
+          printf("%c : %f; ",colorchar,markers[i].area);
           int j = (i + 1) % num_markers;
           markers[i].next_dist = dist(markers[i].loc,markers[j].loc);
           markers[i].next_angle_dist = angle_pos(angle_diff(markers[i].angle,markers[j].angle));
@@ -487,6 +497,7 @@ void TeamDetector::findRobotsByModel(::google::protobuf::RepeatedPtrField< ::SSL
 
         if (model.findPattern(res,markers,num_markers,_pattern_fit_params,_camera_params)) {
               robot=addRobot(robots,res.conf,_max_robots*2);
+              cout<<"Robot"<<endl;
               if (robot!=0) {
                 //setup robot:
                 robot->set_x(cen.loc.x);
@@ -496,6 +507,7 @@ void TeamDetector::findRobotsByModel(::google::protobuf::RepeatedPtrField< ::SSL
                 robot->set_pixel_x(reg->cen_x);
                 robot->set_pixel_y(reg->cen_y);
                 robot->set_height(cen.height);
+                cout<<"Robot co-ordinates: "<<reg->cen_x<<" , "<<reg->cen_y<<endl;
               }
         }
       }
